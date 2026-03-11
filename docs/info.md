@@ -9,26 +9,39 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Hardware implementation of the Simon block cipher (32/64 configuration) integrated with an I2C Slave interface. The design allows a Master device to write a 64-bit key and 32-bit data block, configure the operation mode (Encrypt/Decrypt), and read back the result.
-Default I2C adress **0x50**
+Hardware implementation of the Simon block cipher (32/64 configuration) integrated with an SPI Slave interface. The design allows a Master device to write a 64-bit key and 32-bit data block, configure the operation mode (Encrypt/Decrypt), and read back the result.
 
-## Register Map
+### SPI Interface
 
-All registers are 8-bit wide. Multi-byte registers are stored **Little-Endian** (LSB at lower address).
+SPI Mode 3 (CPOL=1, CPHA=1), MSB first. SPI SCK frequency must be at most CLK/8 for reliable operation.
 
-| Address (Hex) | Name | Access | Description |
-| :--- | :--- | :--- | :--- |
-| **0x00 - 0x07** | `KEY` | R/W | 64-bit Key (LSB first: `0x00` is Key[7:0]). |
-| **0x08 - 0x0B** | `DATA_IN` | R/W | 32-bit Input Block (Plaintext or Ciphertext). LSB first. |
-| **0x0C** | `CONTROL` | R/W | **Bit [0]: CORE_RST** (1 = Reset/Load, 0 = Run)<br>**Bit [1]: CORE_MODE** (0 = Encrypt, 1 = Decrypt) |
-| **0x10 - 0x13** | `RESULT` | R | 32-bit Output Block (Ciphertext or Plaintext). Valid only when `DONE` is 1. |
-| **0x14** | `STATUS` | R | **Bit [1]: DONE** (1 = Valid Result Ready)<br>**Bit [0]: BUSY** (1 = Calculating) |
+### Pin Mapping
 
+| Pin    | Signal   | Direction | Description              |
+|--------|----------|-----------|--------------------------|
+| uio[0] | CS_n     | input     | Chip select, active low  |
+| uio[1] | MOSI     | input     | Master out, slave in     |
+| uio[2] | MISO     | output    | Master in, slave out     |
+| uio[3] | SCK      | input     | SPI clock from master    |
+
+### SPI Command Protocol
+
+First byte of each CS frame selects the command:
+
+| Command | Code | Data                          | Description                                      |
+|---------|------|-------------------------------|--------------------------------------------------|
+| Write Key    | 0x01 | + 8 data bytes, LSB first    | Load 64-bit encryption key                       |
+| Write Block  | 0x02 | + 4 data bytes, LSB first    | Load 32-bit data block                           |
+| Encrypt      | 0x03 | none                         | Start encryption                                 |
+| Decrypt      | 0x04 | none                         | Start decryption                                 |
+| Read Status  | 0x05 | + 1 dummy byte               | Returns {7'b0, done} on MISO                    |
+| Read Result  | 0x06 | + 4 dummy bytes              | Returns 32-bit result on MISO, LSB first         |
 
 ## How to test
 
-Automatic simulation testing using cocotb with simulated I2C master. In real implementation, only I2C master is needed.
+Testing can be done with cocoTB script (install dependencies and make). I've done testing after implementing verilog code to FPGA with SPI master ESP devkit V1 with testing program (/test/hw_test_ESP32_DEVKIT_V1)
 
 ## External hardware
 
-Anything that can act as I2C master
+External SPI master needed
+
