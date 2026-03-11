@@ -10,10 +10,11 @@ from cocotb.triggers import ClockCycles, Timer
 # ---------------------------------------------------------------------------
 # SPI bit-bang helpers  (Mode 3: CPOL=1, CPHA=1, MSB first)
 # ---------------------------------------------------------------------------
-# Pin mapping in ui_in:
-#   bit 0 = SCK   (idle HIGH)
+# Pin mapping in uio:
+#   bit 0 = CS_n  (idle HIGH)
 #   bit 1 = MOSI
-#   bit 2 = CS_n  (idle HIGH)
+#   bit 2 = MISO  (output from slave)
+#   bit 3 = SCK   (idle HIGH)
 
 SPI_HALF_NS = 500  # half-period of SPI clock in ns  (-> 1 MHz SCK)
 
@@ -40,13 +41,13 @@ def simon_32_64_gold(plaintext_int, key_int):
 
 async def spi_begin(dut):
     """Assert CS_n low; SCK stays high (Mode 3 idle)."""
-    dut.ui_in.value = 0x01  # SCK=1, MOSI=0, CS_n=0
+    dut.uio_in.value = 0x08  # SCK=1, MOSI=0, CS_n=0
     await Timer(SPI_HALF_NS, unit="ns")
 
 
 async def spi_end(dut):
     """De-assert CS_n; SCK stays high."""
-    dut.ui_in.value = 0x05  # SCK=1, MOSI=0, CS_n=1
+    dut.uio_in.value = 0x09  # SCK=1, MOSI=0, CS_n=1
     await Timer(SPI_HALF_NS, unit="ns")
 
 
@@ -56,13 +57,13 @@ async def spi_xfer_byte(dut, mosi_byte):
     for i in range(8):
         bit = (mosi_byte >> (7 - i)) & 1
         # Falling SCK edge - slave shifts-out next MISO bit, master sets MOSI
-        dut.ui_in.value = (bit << 1)          # SCK=0, CS_n=0
+        dut.uio_in.value = (bit << 1)          # SCK=0, CS_n=0
         await Timer(SPI_HALF_NS, unit="ns")
         # Rising SCK edge - slave samples MOSI, master samples MISO
-        dut.ui_in.value = (bit << 1) | 0x01   # SCK=1, CS_n=0
+        dut.uio_in.value = (bit << 1) | 0x08   # SCK=1, CS_n=0
         await Timer(100, unit="ns")           # settle time
         try:
-            miso_bit = dut.uo_out.value.to_unsigned() & 1
+            miso_bit = (dut.uio_out.value.to_unsigned() >> 2) & 1
         except ValueError:
             miso_bit = 0  # treat x/z as 0 (GL sim before signals settle)
         miso_byte = (miso_byte << 1) | miso_bit
@@ -141,8 +142,8 @@ async def init_dut(dut):
     clock = Clock(dut.clk, 20, unit="ns")    # 50 MHz  (matches config.json)
     cocotb.start_soon(clock.start())
     dut.ena.value = 1
-    dut.ui_in.value = 0x05   # SPI idle: SCK=1, MOSI=0, CS_n=1
-    dut.uio_in.value = 0
+    dut.ui_in.value = 0
+    dut.uio_in.value = 0x09   # SPI idle: SCK=1, MOSI=0, CS_n=1
     dut.rst_n.value = 0
     await ClockCycles(dut.clk, 10)
     dut.rst_n.value = 1

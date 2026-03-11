@@ -7,10 +7,10 @@
  * SPI Mode 3 (CPOL=1, CPHA=1), MSB first
  *
  * Pin mapping:
- *   ui_in[0]  = SPI SCK   (clock from master)
- *   ui_in[1]  = SPI MOSI  (master out, slave in)
- *   ui_in[2]  = SPI CS_n  (chip select, active low)
- *   uo_out[0] = SPI MISO  (master in, slave out)
+ *   uio[0] = SPI CS_n  (chip select, active low)  [input]
+ *   uio[1] = SPI MOSI  (master out, slave in)     [input]
+ *   uio[2] = SPI MISO  (master in, slave out)     [output]
+ *   uio[3] = SPI SCK   (clock from master)        [input]
  *
  * SPI command protocol (first byte of each CS frame):
  *   0x01 = Write Key     (+ 8 data bytes, LSB first)
@@ -44,14 +44,15 @@ module tt_um_libormiller_SIMON_SPI (
     end
     wire internal_rst_n = por_sr[7] & rst_n;
 
-    // Pin Mapping
-    wire spi_sck   = ui_in[0];
-    wire spi_mosi  = ui_in[1];
-    wire spi_cs_n  = ui_in[2];
+    // Pin Mapping (directly active outputs)
+    assign uo_out  = 8'b0;             // dedicated outputs unused
+    assign uio_oe  = 8'b0000_0100;     // uio[2]=MISO is output, rest inputs
+
+    wire spi_cs_n  = uio_in[0];
+    wire spi_mosi  = uio_in[1];
     wire spi_miso;
-    assign uo_out  = {7'b0, spi_cs_n ? 1'b0 : spi_miso};
-    assign uio_out = 8'b0;
-    assign uio_oe  = 8'b0;
+    wire spi_sck   = uio_in[3];
+    assign uio_out = {5'b0, spi_cs_n ? 1'b0 : spi_miso, 2'b0};
 
 
     // SPI Slave Instance (Mode 3: CPOL=1, CPHA=1)

@@ -67,7 +67,7 @@ module spi_slave (clk, rstb,ten,tdata,mlb,ss,sck,sdin, sdout,done,rdata);
       end
   end
 
-  // Debounce: require 3 consecutive identical samples to change state
+  // Implementace debouncingu (signál musí být stejný 3 clock cykly za sebou)
   reg sck_debounced = 1'b1;
   reg ss_debounced = 1'b1;
   reg sdin_debounced = 1'b0;
