@@ -142,27 +142,27 @@ module tt_um_libormiller_SIMON_SPI (
             startup        <= 1'b1;
             spi_tdata      <= 8'h00;
         end else begin
-            // ------- Startup: pulse cipher reset once after power-on -------
+            // Resets simon core to init state
             if (startup) startup <= 1'b0;
 
-            // ------- Deassert cipher_rst_cmd after one cycle -------
+            // Turn off simon core reset after ome cycle (prevents perma stuck reset)
             if (cipher_rst_cmd) cipher_rst_cmd <= 1'b0;
 
-            // ------- Capture cipher result when computation finishes -------
+            // Cypher results captured (done_status)
             if (cipher_done && !done_status && !cipher_rst) begin
                 result_reg  <= cipher_out;
                 done_status <= 1'b1;
             end
 
-            // ------- CS_n high -> reset byte counter -------
+            // Reset SPI byte counter (after end of communication)
             if (cs_synced) begin
                 byte_cnt <= 4'd0;
             end
 
-            // ------- Process each received SPI byte -------
+            // Process each SPI byte
             if (done_pulse) begin
                 if (byte_cnt == 4'd0) begin
-                    // ---- Command byte (byte 0) ----
+                    //Command byte (byte 0) ----
                     cmd_reg  <= spi_rdata;
                     byte_cnt <= 4'd1;
 
@@ -182,7 +182,7 @@ module tt_um_libormiller_SIMON_SPI (
                         default:         spi_tdata <= 8'h00;
                     endcase
                 end else begin
-                    // ---- Data bytes (byte 1+) ----
+                    //Data bytes (byte 1+)
                     byte_cnt <= byte_cnt + 4'd1;
 
                     case (cmd_reg)
