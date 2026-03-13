@@ -93,7 +93,7 @@ module tt_um_libormiller_SIMON_SPI (
     wire done_pulse = spi_done;
 
     // Data Registers
-    reg [63:0] key_reg;
+    reg [63:0] key_reg=64'hA8C4_9F2B_3D1E_7650;
     reg [31:0] block_reg;
     reg [31:0] result_reg;
     reg        done_status;
