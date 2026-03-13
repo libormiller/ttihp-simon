@@ -67,7 +67,7 @@ module spi_slave (clk, rstb,ten,tdata,mlb,ss,sck,sdin, sdout,done,rdata);
       end
   end
 
-  // Implementace debouncingu (signál musí být stejný 3 clock cykly za sebou)
+  // Implementation of debouncing (signal has to be the same three clocks in a row)
   reg sck_debounced = 1'b1;
   reg ss_debounced = 1'b1;
   reg sdin_debounced = 1'b0;
