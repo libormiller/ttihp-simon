@@ -469,6 +469,60 @@ static bool test_fpga_stress(uint32_t iterations) {
     }
 }
 
+/**
+ * Test 5: Default key round-trip.
+ * Resets FPGA, then encrypts and decrypts a random block to verify
+ * the default hardware key is working correctly.
+ */
+static bool test_default_key_roundtrip() {
+    Serial.println("══════════════════════════════════════");
+    Serial.println("  TEST: Default key round-trip");
+    Serial.println("══════════════════════════════════════");
+
+    // Reset FPGA to restore the default key
+    fpga_reset();
+
+    uint32_t plaintext = esp_random();
+    Serial.printf("  Plaintext: 0x%08lX\n", plaintext);
+
+    unsigned long t_start = micros();
+
+    // ── Encrypt ──
+    fpga_write_block(plaintext);
+    fpga_encrypt();
+
+    if (!fpga_wait_done()) {
+        Serial.println("  FAIL — encrypt timeout");
+        return false;
+    }
+
+    uint32_t ct = fpga_read_result();
+    Serial.printf("  Ciphertext: 0x%08lX\n", ct);
+
+    // ── Decrypt ──
+    fpga_write_block(ct);
+    fpga_decrypt();
+
+    if (!fpga_wait_done()) {
+        Serial.println("  FAIL — decrypt timeout");
+        return false;
+    }
+
+    uint32_t recovered = fpga_read_result();
+    unsigned long t_elapsed = micros() - t_start;
+
+    Serial.printf("  Decrypted: 0x%08lX\n", recovered);
+    Serial.printf("  Time:      %lu us\n", t_elapsed);
+
+    if (recovered == plaintext) {
+        Serial.println("  >> PASS <<");
+        return true;
+    } else {
+        Serial.print("  >> FAIL <<");
+        return false;
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Console helpers
 // ═══════════════════════════════════════════════════════════════════════════
@@ -507,9 +561,10 @@ static void print_menu() {
     Serial.println("║  2 — Decrypt test vector            ║");
     Serial.println("║  3 — Random encrypt/decrypt (+ ref) ║");
     Serial.println("║  4 — FPGA stress round-trip         ║");
-    Serial.println("║  5 — Run all tests (1+2+3+4)        ║");
+    Serial.println("║  5 — Run all tests (1+2+3+4+8)      ║");
     Serial.println("║  6 — Read FPGA status register      ║");
     Serial.println("║  7 — Reset FPGA                     ║");
+    Serial.println("║  8 — Default key round-trip         ║");
     Serial.println("╚══════════════════════════════════════╝");
     Serial.print(">> Select: ");
 }
@@ -551,7 +606,7 @@ void loop() {
     if (!Serial.available()) return;
 
     char c = Serial.read();
-    if (c < '1' || c > '7') return;  // ignore invalid input
+    if (c < '1' || c > '8') return;  // ignore invalid input
 
     Serial.println(c);  // echo selection
     Serial.println();
@@ -584,6 +639,8 @@ void loop() {
             Serial.println();
             ok &= test_decrypt();
             Serial.println();
+            ok &= test_default_key_roundtrip();
+            Serial.println();
             uint32_t n3 = read_uint("  Iterations for random+ref test", 10);
             ok &= test_random_roundtrip(n3);
             Serial.println();
@@ -602,6 +659,10 @@ void loop() {
 
         case '7':
             fpga_reset();
+            break;
+
+        case '8':
+            test_default_key_roundtrip();
             break;
     }
 

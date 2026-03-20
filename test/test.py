@@ -165,6 +165,35 @@ CIPHER_TV     = 0xc69be9bb
 
 
 @cocotb.test()
+async def test_default_key_roundtrip(dut):
+    """Encrypt then decrypt a random block using the default key; verify round-trip."""
+    await init_dut(dut)
+    dut._log.info("=== Default key round-trip test ===")
+
+    plaintext = random.getrandbits(32)
+    dut._log.info(f"Plaintext:  0x{plaintext:08X}")
+
+    # We skip writing the key and rely on the hardware reset default
+    await spi_write_block(dut, plaintext)
+    await spi_encrypt(dut)
+
+    assert await wait_done(dut), "Encryption did not finish"
+
+    ciphertext = await spi_read_result(dut)
+    dut._log.info(f"Ciphertext: 0x{ciphertext:08X}")
+
+    await spi_write_block(dut, ciphertext)
+    await spi_decrypt(dut)
+
+    assert await wait_done(dut), "Decryption did not finish"
+
+    decrypted = await spi_read_result(dut)
+    dut._log.info(f"Decrypted:  0x{decrypted:08X}  (expected 0x{plaintext:08X})")
+    assert decrypted == plaintext, f"Round-trip default key mismatch: 0x{decrypted:08X} != 0x{plaintext:08X}"
+    dut._log.info("PASS")
+
+
+@cocotb.test()
 async def test_encrypt(dut):
     """Encrypt with known test vector and verify ciphertext."""
     await init_dut(dut)

@@ -93,7 +93,7 @@ module tt_um_libormiller_SIMON_SPI (
     wire done_pulse = spi_done;
 
     // Data Registers
-    reg [63:0] key_reg=64'hA8C4_9F2B_3D1E_7650;
+    reg [63:0] key_reg;
     reg [31:0] block_reg;
     reg [31:0] result_reg;
     reg        done_status;
@@ -133,7 +133,7 @@ module tt_um_libormiller_SIMON_SPI (
         if (!internal_rst_n) begin
             byte_cnt       <= 4'd0;
             cmd_reg        <= 8'h00;
-            key_reg        <= 64'b0;
+            key_reg        <= 64'hA8C4_9F2B_3D1E_7650;
             block_reg      <= 32'b0;
             result_reg     <= 32'b0;
             done_status    <= 1'b0;
@@ -227,6 +227,6 @@ module tt_um_libormiller_SIMON_SPI (
     end
 
     // Suppress unused-input warnings
-    wire _unused = &{ena, ui_in[7:3], uio_in, 1'b0};
+    wire _unused = &{ena, ui_in, uio_in, 1'b0};
 
 endmodule

@@ -68,9 +68,9 @@ module spi_slave (clk, rstb,ten,tdata,mlb,ss,sck,sdin, sdout,done,rdata);
   end
 
   // Implementation of debouncing (signal has to be the same three clocks in a row)
-  reg sck_debounced = 1'b1;
-  reg ss_debounced = 1'b1;
-  reg sdin_debounced = 1'b0;
+  reg sck_debounced;
+  reg ss_debounced;
+  reg sdin_debounced;
 
   always @(posedge clk or negedge rstb) begin
       if (!rstb) begin
